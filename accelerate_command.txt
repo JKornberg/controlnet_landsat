@@ -1,14 +1,14 @@
 accelerate launch train_controlnet.py \
  --pretrained_model_name_or_path="stabilityai/stable-diffusion-2-1-base" \
  --output_dir="model_out" \
- --dataset_name="kornberg/landsat_unfiltered" \
+ --dataset_name="kornberg/landsat_captions" \
  --conditioning_image_column=input \
  --image_column=target \
  --caption_column=image_caption \
  --resolution=256 \
  --learning_rate=1e-5 \
- --validation_image "validation_images/1018.jpg" "validation_images/1040.jpg" "validation_images/10151.jpg" \
- --validation_prompt "Image of earth from a satellite" "Image of earth from a satellite" "Image of earth from a satellite" \
+ --validation_image "data/validation_samples/4841.jpg","data/validation_samples/4841.jpg", "data/validation_samples/9531.jpg", "data/validation_samples/10029.jpg", "data/validation_samples/10068.jpg",  "data/validation_samples/25533.jpg"
+ --validation_prompt "A satellite image of the earth. The weather is clear", "A satellite image of the earth. The weather is cloudy and cold", "A satellite image of the earth. The weather is slightly cloudy and very snowy", "A satellite image of the earth. The weather is clear", "A satellite image of the earth. The weather is slightly cloudy and cold","A satellite image of the earth. The weather is very cloudy and very snowy"\
  --train_batch_size=4 \
  --num_train_epochs=3 \
  --tracker_project_name="controlnet" \

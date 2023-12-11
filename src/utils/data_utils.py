@@ -93,17 +93,37 @@ def brighten_targets(data):
     data['target'] = ImageEnhance.Brightness(data['target']).enhance(2.6)
     return data
 
+def get_inputs_targets_captions(src_folder):
+    # src folder is  train, val, or test
 
-def make_hf_dataset(input_folder, target_folder, masks_folder, save_to_disk=True, dset_location=None):
+    input_folder = os.path.join(src_folder, "inputs")
+    target_folder = os.path.join(src_folder, "outputs")
+    masks_folder = os.path.join(src_folder, "masks")
     split_captions, cloud_segments, snow_segments = get_captions(masks_folder)
     binary_captions,cloud_segments_binary, snow_segments_binary = get_binary_captions(masks_folder)
     input_paths = [os.path.join(input_folder, path) for path in os.listdir(input_folder)]
     target_paths = [os.path.join(target_folder, path) for path in os.listdir(target_folder)]
-    dataset = Dataset.from_dict({"input" : input_paths, "target" : target_paths, 
-                                "captions" : split_captions, "binary_captions" : binary_captions,
-                                "cloud_segments" : cloud_segments, "snow_segments" : snow_segments,
-                                "cloud_segments_binary" : cloud_segments_binary, 
-                                "snow_segments_binary" : snow_segments_binary}).cast_column("input", Image()).cast_column("target", Image())
+    return input_paths, target_paths, split_captions, binary_captions, cloud_segments, snow_segments, cloud_segments_binary, snow_segments_binary
+
+
+def make_hf_dataset(src_folder, save_to_disk=True, dset_location=None):
+    train_folder = os.path.join(src_folder, "train")
+    val_folder = os.path.join(src_folder, "val")
+    test_folder = os.path.join(src_folder, "test")
+    dataset_dict = {}
+    train_data = get_inputs_targets_captions(train_folder)
+    dataset_dict["train"] = {"input" : train_data[0], "target" : train_data[1], "captions" : train_data[2], "binary_captions" : train_data[3], "cloud_segments" : train_data[4], "snow_segments" : train_data[5], "cloud_segments_binary" : train_data[6], "snow_segments_binary" : train_data[7]}
+
+    val_data = get_inputs_targets_captions(val_folder)
+    dataset_dict["validation"] = {"input" : val_data[0], "target" : val_data[1], "captions" : val_data[2], "binary_captions" : val_data[3], "cloud_segments" : val_data[4], "snow_segments" : val_data[5], "cloud_segments_binary" : val_data[6], "snow_segments_binary" : val_data[7]}
+
+    test_data = get_inputs_targets_captions(test_folder)
+    dataset_dict["test"] = {"input" : test_data[0], "target" : test_data[1], "captions" : test_data[2], "binary_captions" : test_data[3], "cloud_segments" : test_data[4], "snow_segments" : test_data[5], "cloud_segments_binary" : test_data[6], "snow_segments_binary" : test_data[7]}
+
+    train_dataset = Dataset.from_dict(dataset_dict["train"]).cast_column("input", Image()).cast_column("target", Image())
+    val_dataset = Dataset.from_dict(dataset_dict["validation"]).cast_column("input", Image()).cast_column("target", Image())
+    test_dataset = Dataset.from_dict(dataset_dict["test"]).cast_column("input", Image()).cast_column("target", Image())
+
     dataset = dataset.map(brighten_targets)
     if save_to_disk:
         print("Saving dset to disk...")

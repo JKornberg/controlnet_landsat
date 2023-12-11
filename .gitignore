@@ -47,3 +47,4 @@ wandb/
 
 *.hf
 data/landsat/*
+data/landsat_large/*
