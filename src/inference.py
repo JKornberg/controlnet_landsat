@@ -37,46 +37,41 @@ from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
 
 logger = get_logger(__name__)
+seed = 0
 
-
-def log_validation(vae, text_encoder, tokenizer, unet, controlnet, args, accelerator, weight_dtype, step):
+def log_validation(validation_image, validation_prompt, vae, text_encoder, tokenizer, unet, controlnet, accelerator, weight_dtype, step):
     logger.info("Running Inference... ")
 
     controlnet = accelerator.unwrap_model(controlnet)
 
     pipeline = StableDiffusionControlNetPipeline.from_pretrained(
-        args.pretrained_model_name_or_path,
+        'stabilityai/stable-diffusion-2-1-base',
         vae=vae,
         text_encoder=text_encoder,
         tokenizer=tokenizer,
         unet=unet,
         controlnet=controlnet,
         safety_checker=None,
-        revision=args.revision,
-        variant=args.variant,
+        revision=None,
+        variant=None,
         torch_dtype=weight_dtype,
     )
     pipeline.scheduler = UniPCMultistepScheduler.from_config(pipeline.scheduler.config)
     pipeline = pipeline.to(accelerator.device)
     pipeline.set_progress_bar_config(disable=True)
 
-    if args.enable_xformers_memory_efficient_attention:
-        pipeline.enable_xformers_memory_efficient_attention()
+    
+    generator = torch.Generator(device=accelerator.device).manual_seed(seed)
 
-    if args.seed is None:
-        generator = None
-    else:
-        generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
-
-    if len(args.validation_image) == len(args.validation_prompt):
-        validation_images = args.validation_image
-        validation_prompts = args.validation_prompt
-    elif len(args.validation_image) == 1:
-        validation_images = args.validation_image * len(args.validation_prompt)
-        validation_prompts = args.validation_prompt
-    elif len(args.validation_prompt) == 1:
-        validation_images = args.validation_image
-        validation_prompts = args.validation_prompt * len(args.validation_image)
+    if len(validation_image) == len(validation_prompt):
+        validation_images = validation_image
+        validation_prompts = validation_prompt
+    elif len(validation_image) == 1:
+        validation_images = validation_image * len(validation_prompt)
+        validation_prompts = validation_prompt
+    elif len(validation_prompt) == 1:
+        validation_images = validation_image
+        validation_prompts = validation_prompt * len(validation_image)
     else:
         raise ValueError(
             "number of `args.validation_image` and `args.validation_prompt` should be checked in `parse_args`"
@@ -89,7 +84,7 @@ def log_validation(vae, text_encoder, tokenizer, unet, controlnet, args, acceler
 
         images = []
 
-        for _ in range(args.num_validation_images):
+        for _ in range(len(validation_images)):
             with torch.autocast("cuda"):
                 image = pipeline(
                     validation_prompt, validation_image, num_inference_steps=20, generator=generator
